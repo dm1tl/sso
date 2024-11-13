@@ -104,7 +104,7 @@ func (a *Auth) Login(
 	return token, nil
 }
 
-// Register input new user in db and returns token
+// RegisterNewUser input new user in db and returns token
 // if fields aren't validated, or email is not unique returns error
 func (a *Auth) RegisterNewUser(
 	ctx context.Context,
@@ -136,13 +136,27 @@ func (a *Auth) RegisterNewUser(
 	return id, nil
 }
 
-// Register checks if user with concrete id has user access or not
+// IsAdmin checks if user with concrete id has admin access or not
 // if yes - returns true, else false
 // if UserId is incorrect or doesn't exist in db returns error
 func (a *Auth) IsAdmin(
 	ctx context.Context,
 	UserId int64) (bool, error) {
-	panic("implement me")
+	const op = "internal.services.auth.IsAdmin"
+	log := a.log.With(
+		slog.String("op", op),
+	)
+	log.Info("checking if user is admin")
+	isAdmin, err := a.usrPrvdr.IsAdmin(ctx, UserId)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotExists) {
+			log.Warn("user not exist", slogerr.Err(err))
+			return false, fmt.Errorf("%s: %v", op, ErrInvalidCredentials)
+		}
+		log.Error("couldn't get status of user with such id", slogerr.Err(err))
+	}
+	log.Info("checked if user admin", slog.Bool("is_admin", isAdmin))
+	return isAdmin, nil
 }
 
 func (a *Auth) fetchJWTSecret() string {
