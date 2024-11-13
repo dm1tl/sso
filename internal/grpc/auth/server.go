@@ -16,7 +16,7 @@ type Auth interface {
 		email string,
 		password string,
 		appId int) (token string, err error)
-	Register(
+	RegisterNewUser(
 		ctx context.Context,
 		email string,
 		password string) (UserId int64, err error)
@@ -58,7 +58,7 @@ func (s *serverAPI) Register(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	userId, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
+	userId, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
