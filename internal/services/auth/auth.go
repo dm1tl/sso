@@ -1,4 +1,4 @@
-package auth
+package authserv
 
 import (
 	"context"
@@ -25,7 +25,7 @@ type Auth struct {
 }
 
 var (
-	ErrInvalidCredentials = "invalid credentials"
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 // New returns new instance of Auth service
@@ -69,30 +69,30 @@ func (a *Auth) Login(
 	ctx context.Context,
 	email string,
 	password string,
-	appID int64,
+	appID int,
 ) (string, error) {
 	const op = "internal.services.auth.Login"
 	log := a.log.With(
 		slog.String("op", op),
 	)
 	if err := godotenv.Load(); err != nil {
-		log.Error("couldn't load env variables %v", slogerr.Err(err))
+		log.Error("couldn't load env variables %w", slogerr.Err(err))
 	}
 	log.Info("trying to login user")
 	user, err := a.usrPrvdr.User(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotExists) {
 			log.Warn("user not found", slogerr.Err(err))
-			return "", fmt.Errorf("%s: %v", op, ErrInvalidCredentials)
+			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 		log.Error("couldn't get user with such id", slogerr.Err(err))
-		return "", fmt.Errorf("op: %v", op)
+		return "", fmt.Errorf("op: %s", op)
 	}
 
 	log.Info("getting password from db")
 	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password)); err != nil {
 		log.Info("invalid credentionals", slogerr.Err(err))
-		return "", fmt.Errorf("%s: %v", op, ErrInvalidCredentials)
+		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
 	log.Info("user logged in succesfully")
@@ -120,17 +120,17 @@ func (a *Auth) RegisterNewUser(
 	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("couldn't hash password", slogerr.Err(err))
-		return 0, fmt.Errorf("op: %v", op)
+		return 0, fmt.Errorf("op: %s", op)
 	}
 
 	id, err := a.usrSvr.SaveUser(ctx, email, passHash)
 	if err != nil {
 		if errors.Is(err, storage.ErrAlreadyExists) {
 			log.Warn("such user is already exists", slogerr.Err(err))
-			return 0, fmt.Errorf("%s: %v", op, storage.ErrAlreadyExists)
+			return 0, fmt.Errorf("%s: %w", op, storage.ErrAlreadyExists)
 		}
 		log.Error("couldn't save password in db", slogerr.Err(err))
-		return 0, fmt.Errorf("op: %v", op)
+		return 0, fmt.Errorf("op: %s", op)
 	}
 	log.Info("user registered")
 	return id, nil
@@ -151,7 +151,7 @@ func (a *Auth) IsAdmin(
 	if err != nil {
 		if errors.Is(err, storage.ErrNotExists) {
 			log.Warn("user not exist", slogerr.Err(err))
-			return false, fmt.Errorf("%s: %v", op, ErrInvalidCredentials)
+			return false, fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 		log.Error("couldn't get status of user with such id", slogerr.Err(err))
 	}
@@ -165,7 +165,7 @@ func (a *Auth) fetchJWTSecret() string {
 		slog.String("op", op),
 	)
 	if err := godotenv.Load(); err != nil {
-		log.Error("couldn't load env variables %v", slogerr.Err(err))
+		log.Error("couldn't load env variables %w", slogerr.Err(err))
 	}
 	res := os.Getenv("JWT_SECRET")
 	return res

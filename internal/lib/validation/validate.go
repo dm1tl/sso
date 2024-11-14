@@ -8,6 +8,7 @@ import (
 
 func ValidateLoginData(req *ssov1.LoginRequest) error {
 	return validation.ValidateStruct(
+		req,
 		validateEmail(&req.Email),
 		validatePassword(&req.Password),
 		validateAppId(&req.AppId),
@@ -16,6 +17,7 @@ func ValidateLoginData(req *ssov1.LoginRequest) error {
 
 func ValidateRegisterData(req *ssov1.RegisterRequest) error {
 	return validation.ValidateStruct(
+		req,
 		validateEmail(&req.Email),
 		validatePassword(&req.Password),
 	)
@@ -23,6 +25,7 @@ func ValidateRegisterData(req *ssov1.RegisterRequest) error {
 
 func ValidateIsAdminData(req *ssov1.IsAdminRequest) error {
 	return validation.ValidateStruct(
+		req,
 		validateUserId(&req.UserId),
 	)
 }
