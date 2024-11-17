@@ -11,7 +11,6 @@ func ValidateLoginData(req *ssov1.LoginRequest) error {
 		req,
 		validateEmail(&req.Email),
 		validatePassword(&req.Password),
-		validateAppId(&req.AppId),
 	)
 }
 
@@ -23,11 +22,15 @@ func ValidateRegisterData(req *ssov1.RegisterRequest) error {
 	)
 }
 
-func ValidateIsAdminData(req *ssov1.IsAdminRequest) error {
+func ValidateTokenData(req *ssov1.ValidateTokenRequest) error {
 	return validation.ValidateStruct(
 		req,
-		validateUserId(&req.UserId),
+		validateToken(&req.Token),
 	)
+}
+
+func validateToken(token *string) *validation.FieldRules {
+	return validation.Field(token, validation.Required)
 }
 
 func validateEmail(email *string) *validation.FieldRules {
@@ -36,10 +39,6 @@ func validateEmail(email *string) *validation.FieldRules {
 
 func validatePassword(password *string) *validation.FieldRules {
 	return validation.Field(password, validation.Required, validation.Length(8, 0))
-}
-
-func validateAppId(appId *int64) *validation.FieldRules {
-	return validation.Field(appId, validation.Required)
 }
 
 func validateUserId(userId *int64) *validation.FieldRules {

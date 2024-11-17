@@ -17,15 +17,14 @@ type Auth interface {
 	Login(
 		ctx context.Context,
 		email string,
-		password string,
-		appId int) (token string, err error)
+		password string) (token string, err error)
 	RegisterNewUser(
 		ctx context.Context,
 		email string,
 		password string) (UserId int64, err error)
-	IsAdmin(
+	ValidateToken(
 		ctx context.Context,
-		UserId int64) (bool, error)
+		token string) (UserId int64, err error)
 }
 
 type serverAPI struct {
@@ -37,6 +36,20 @@ func Register(gRPC *grpc.Server, auth Auth) {
 	ssov1.RegisterAuthServer(gRPC, &serverAPI{auth: auth})
 }
 
+func (s *serverAPI) ValidateToken(
+	ctx context.Context,
+	req *ssov1.ValidateTokenRequest) (*ssov1.ValidateTokenResponse, error) {
+	if err := validation.ValidateTokenData(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	id, err := s.auth.ValidateToken(ctx, req.GetToken())
+	if err != nil {
+		//TODO process error
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+	return &ssov1.ValidateTokenResponse{Id: id}, nil
+}
+
 func (s *serverAPI) Login(
 	ctx context.Context,
 	req *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
@@ -45,7 +58,7 @@ func (s *serverAPI) Login(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
+	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, authserv.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
@@ -72,20 +85,4 @@ func (s *serverAPI) Register(
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssov1.RegisterResponse{UserId: userId}, nil
-}
-
-func (s *serverAPI) IsAdmin(
-	ctx context.Context,
-	req *ssov1.IsAdminRequest) (*ssov1.IsAdminResponse, error) {
-
-	if err := validation.ValidateIsAdminData(req); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
-	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	return &ssov1.IsAdminResponse{IsAdmin: isAdmin}, nil
 }
