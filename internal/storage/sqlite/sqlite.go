@@ -26,6 +26,27 @@ func New(storagePath string) (*Storage, error) {
 	}, nil
 }
 
+func (s *Storage) DeleteUser(ctx context.Context,
+	id int64) (err error) {
+	const op = "internal.storage.sqlite.DeleteUser()"
+	stmt, err := s.db.Prepare("DELETE FROM users WHERE id = ?")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	res, err := stmt.ExecContext(ctx, id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	rowsCount, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if rowsCount != 1 {
+		return errors.New("user hasn't deleted")
+	}
+	return nil
+}
+
 func (s *Storage) SaveUser(ctx context.Context,
 	email string,
 	passwordHash []byte) (uid int64, err error) {

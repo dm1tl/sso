@@ -27,15 +27,33 @@ type Auth interface {
 		token string) (UserId int64, err error)
 }
 
+type User interface {
+	DeleteUser(
+		ctx context.Context,
+		id int64) (err error)
+}
+
 type serverAPI struct {
 	ssov1.UnimplementedAuthServer
+	ssov1.UnimplementedUserServer
 	auth Auth
+	user User
 }
 
-func Register(gRPC *grpc.Server, auth Auth) {
-	ssov1.RegisterAuthServer(gRPC, &serverAPI{auth: auth})
+func Register(gRPC *grpc.Server, auth Auth, user User) {
+	ssov1.RegisterAuthServer(gRPC, &serverAPI{auth: auth, user: user})
+	ssov1.RegisterUserServer(gRPC, &serverAPI{auth: auth, user: user})
 }
 
+func (s *serverAPI) Delete(
+	ctx context.Context,
+	req *ssov1.DeleteRequest) (*ssov1.DeleteResponse, error) {
+	err := s.user.DeleteUser(ctx, req.GetId())
+	if err != nil {
+		return &ssov1.DeleteResponse{ErrorMessage: "Unable to delete user"}, status.Error(codes.NotFound, "user not found")
+	}
+	return &ssov1.DeleteResponse{ErrorMessage: "success"}, nil
+}
 func (s *serverAPI) ValidateToken(
 	ctx context.Context,
 	req *ssov1.ValidateTokenRequest) (*ssov1.ValidateTokenResponse, error) {

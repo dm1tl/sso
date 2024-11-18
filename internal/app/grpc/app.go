@@ -17,9 +17,10 @@ type App struct {
 
 func New(logger *slog.Logger,
 	authService authgrpc.Auth,
+	userService authgrpc.User,
 	port string) *App {
 	grpcServer := grpc.NewServer()
-	authgrpc.Register(grpcServer, authService)
+	authgrpc.Register(grpcServer, authService, userService)
 	return &App{
 		log:        logger,
 		gRPCserver: grpcServer,
